@@ -1,0 +1,136 @@
+# ⏚ OpenHack
+
+**Open Source Agentic Security Scanner for your codebase.**
+
+Like Claude Code Security / Codex Security but open source. OpenHack does recon -> hunting -> validation -> verification all in one pipeline to find high quality verified vulnerabilities. OpenHack exclusively uses open source models and specializes in web app vulnerabilities.
+
+## Install
+
+```bash
+pipx install openhack
+```
+
+Or with pip:
+
+```bash
+pip install openhack
+```
+
+## Quick start
+
+```bash
+openhack
+```
+
+On first run you'll go through a one-time setup:
+
+1. Pick **Login with OpenHack account** (recommended) — opens a browser, you log in, get **$25 in free credits**, and the CLI gets a token automatically.
+2. Type `/scan .` to scan the current directory, or `/scan path/to/repo` for somewhere else.
+3. While scanning, the **Trace tab** shows live agent activity (recon → hunters → validators). When the scan finishes, the **Findings tab** shows everything that was found.
+
+## What it does
+
+OpenHack runs a multi-agent pipeline against your codebase:
+
+- **Recon** — reads the code, builds a project model
+- **Hunters** — multiple specialized agents look for different vulnerability classes (input validation, access control, data handling, …)
+- **Feature hunters** — deeper passes on specific risk categories (XSS rendering, raw SQL, command exec, etc.)
+- **Validators** — re-read the suspect code to confirm or reject each candidate finding
+- **Sandbox verification** (`/verify sandbox`) _(Beta — requires Docker)_ — spins up your app in a Docker container and attempts to exploit each finding with live HTTP requests. Findings that are successfully exploited get a ✓ mark.
+- **Browser verification** (`/verify browser`) _(Beta — requires Docker when combined with sandbox)_ — launches a headless browser against the sandboxed app to verify client-side vulnerabilities (XSS, CSRF, DOM-based issues) with real browser execution.
+
+> **Docker prerequisite.** Sandbox verification requires Docker Desktop (or any working Docker daemon) installed and running on the machine where the scan runs. Browser verification inherits this when used with sandbox. If Docker isn't running, `/verify sandbox` will fail with a clear error before the scan starts.
+
+For every confirmed finding you get: severity, CVSS score, file location, full description, the vulnerable code snippet, and a recommended fix — all rendered with syntax highlighting in the TUI.
+
+## Slash commands
+
+| Command | Description |
+| --- | --- |
+| `/scan <path>` | Full scan on a directory (defaults to current dir) |
+| `/pause` · `/resume` | Pause and resume a running scan (Ctrl+C also pauses) |
+| `/cancel` | Permanently cancel a running scan |
+| `/sessions` | Browse and re-load past scans (also supports re-running an aborted scan with `r`) |
+| `/findings` | Re-display findings from last scan |
+| `/copy` | Copy the selected finding (description + vulnerable code + fix) for Codex / Claude Code / OpenCode |
+| `/verify sandbox` _(Beta)_ | Spin up a Docker sandbox and exploit-test each finding with live requests |
+| `/verify browser` _(Beta)_ | Launch a headless browser to verify client-side vulns (XSS, CSRF, etc.) |
+| `/login` | Re-login to your OpenHack account |
+| `/setup` | Run the setup wizard again |
+| `/config` | Show current config; `/config <key> <value>` to set |
+| `/sidebar` | Show/hide the Findings list sidebar (`Ctrl+B`) |
+| `/cost` | Cost breakdown for the last scan |
+| `/clear` | Clear scan state and return to landing |
+| `/discord` | Open the OpenHack Discord |
+| `/mouse` | Toggle mouse capture (off = native text selection) |
+| `/help` | List commands |
+| `/quit` | Exit |
+
+## Keyboard shortcuts (Findings tab)
+
+- `↑` / `↓` — switch finding
+- `[` · `]` — alternate prev / next
+- Mouse wheel or `PgUp` / `PgDn` — scroll the details pane
+- `y` — yank (copy) selected finding for an AI agent
+- `<` · `>` — resize the sidebar
+- `Ctrl+B` — toggle sidebar
+
+## Keyboard shortcuts (Trace tab)
+
+- `↑` / `↓` — switch agent in the sidebar tree
+- `[` · `]` — alternate prev / next agent
+- Mouse wheel or `PgUp` / `PgDn` — scroll the trace
+- `Home` — jump to "All" (full trace)
+- `End` — resume auto-follow-to-bottom
+
+## Selecting text
+
+The TUI captures mouse events by default (for scrolling and clicking). To select and copy text natively:
+
+- **macOS**: Hold `Option` (⌥) and drag to select, then `Cmd+C` to copy.
+- **Linux / Windows**: Hold `Shift` and drag to select.
+- **Or**: Run `/mouse` to disable mouse capture entirely — the terminal's native selection works normally until you toggle it back on.
+
+## Headless mode (no TUI)
+
+For CI, scripts, or one-off scans where you don't want the chat interface, pass a path directly:
+
+```bash
+openhack /path/to/repo
+```
+
+OpenHack runs the same pipeline as the TUI, prints progress to stdout, writes a JSON report to `~/.openhack/scans/scan-<session-id>.json`, and exits. Other headless commands:
+
+| Command | Description |
+| --- | --- |
+| `openhack /path/to/repo` | Full scan, headless |
+| `openhack --classify /path/to/repo` | Just classify frameworks + detect entry points (fast preview, no LLM calls) |
+| `openhack --list-sessions` | List all saved sessions |
+| `openhack --list-entry-points <id>` | Show every entry point in a session |
+| `openhack --resume <id>` | Resume a previous scan from where it left off |
+| `openhack --help` | Show usage |
+
+Exit code is `0` on a completed scan (regardless of findings), `1` on error, `130` on `Ctrl+C`.
+
+## Configuration
+
+Configuration is stored in `~/.openhack/config` (mode `0600` since it contains a bearer token) and persists across sessions.
+
+You can override at runtime via environment variables:
+
+| Variable | Effect |
+| --- | --- |
+| `OPENHACK_API_KEY` | Bearer token for the OpenHack inference API |
+| `OPENHACK_DEV=1` | Point the CLI at local dev servers (app on `:9080`, inference on `:8787`) for self-hosted setups |
+
+## Privacy
+
+OpenHack reads and processes your source code **locally** — prompts are built on your machine. Only LLM tokens (not raw source files) are forwarded to the OpenHack inference API. No source code is uploaded or retained.
+
+## Contributing
+
+OpenHack is open source. Issues and PRs welcome on [GitHub](https://github.com/openhackai/openhack).
+
+## License
+
+AGPL-3.0 — see [LICENSE](LICENSE). Free for personal, educational, and open-source use. For commercial licensing without AGPL obligations, contact [team@openhack.com](mailto:team@openhack.com).
